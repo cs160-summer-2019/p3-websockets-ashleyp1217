@@ -24,13 +24,72 @@
     var canvas = document.getElementById('myCanvas');
     paper.setup(canvas);
     var tool = new paper.Tool();
+  function randColor(){
+    var w = '0123456789ABCDEF';
+    var color = '#';
+    for (var i = 0; i<6; i++){
+      color = color + w[Math.floor(Math.random()*16)];
+    }
+    return color;
+  }
+    var paths = {};
+    var id = Math.floor(Math.random() * 1000000);
+  var color = randColor();
+  
+
 
     // getting the URL (you may want to use for Exercise 3)
     var url = window.location.href;
 
-    // var socket = new WebSocket(
-    //     'wss://<your url here>/ws/draw');
+    var socket = new WebSocket(
+        'wss://p3-websockets-ashleyp1217-ashleyp1217256574.codeanyapp.com/ws/draw');
+   
+  //Drawing
+  var thisPath = new paper.Path();
+  thisPath.strokeColor = color;
+  thisPath.strokeWidth = "10";
+  tool.onMouseMove = function(event){
+    var obj = {id: id, x: event.point.x, y: event.point.y, color: color};
+    var jsonstr = JSON.stringify(obj);
+    socket.send(jsonstr);
+    thisPath.add(event.point);
+  }
+  
 
-
+  
+  //display messages sent to server
+  socket.onmessage = function(receivedMessage){
+    if (url.indexOf("?size=small") >-1){
+      return;
+    }
+    var data = JSON.parse(receivedMessage.data);
+    var rID = (data.id).toString();
+    var rx = data.x;
+    var ry = data.y;
+    var newPoint = new paper.Point(rx,ry);
+    var color = data.color;
+    if (!(rID in paths)){
+      paths[rID] = new paper.Path();
+    }
+    paths[rID].strokeColor = color;
+    paths[rID].add(newPoint);
+  }
+  
+  $(document).ready(() => {
+  window.addEventListener('devicemotion', (event) => {
+    if ((Math.abs(event.acceleration.x) > 15) || (Math.abs(event.acceleration.y)>15) || (Math.abs(event.acceleration.z) > 15)){
+      paper.project.clear();
+    }
+  });
+  
+  window.addEventListener('deviceorientation', (event) => {
+    console.log('first');
+    if (Math.abs(event.gamma) > 15){
+      thisPath.strokeColor = randColor();
+    }
+  });
+  
+});
+  
 </script>
 </html>
